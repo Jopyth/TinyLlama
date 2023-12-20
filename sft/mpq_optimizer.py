@@ -5,7 +5,7 @@ import torch
 from torch import nn
 from torch.optim import Optimizer
 
-from bitorch_engine.layers.qlinear.nbit.cuda.utils import unpack_qweight
+from bitorch_engine.layers.qlinear.nbit.cuda.utils import unpack_qweight, pack_fp_weight
 
 class AdamW(Optimizer):
     """
@@ -129,7 +129,8 @@ class AdamW(Optimizer):
                     w.add_(w, alpha=(-group["lr"] * group["weight_decay"]))
 
                 if is_qweight:
-                    # update qweight here
-                    p = get_qweight_from_weight(w, p.scales, p.zeros, p.g_idx, p.w_bit, p.asym)
+                    # update qweight data
+                    p.data = pack_fp_weight(w, p.scales, p.zeros, p.g_idx, p.w_bit, p.asym, p.device)
+                    is_qweight = False
 
         return loss
