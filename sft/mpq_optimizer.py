@@ -5,6 +5,7 @@ import torch
 from torch import nn
 from torch.optim import Optimizer
 
+from bitorch_engine.layers.qlinear.nbit.utils import QweightParameter
 from bitorch_engine.layers.qlinear.nbit.cuda.utils import unpack_qweight, pack_fp_weight
 
 class AdamW(Optimizer):
@@ -76,11 +77,11 @@ class AdamW(Optimizer):
                 if p.grad is None:
                     continue
                 # find MPQLinearCuda.qweight
-                if p.privileged_grad is not None:
+                if isinstance(p, QweightParameter) and p.privileged_grad is not None:
                     is_qweight = True
                     grad = p.privileged_grad
                     # unpack qweight
-                    w = unpack_qweight(p, p.scales, p.zeros, p.g_idx, p.w_bit, p.asym, p.device).to(p.privileged_grad.dtype)
+                    w = unpack_qweight(p).to(p.privileged_grad.dtype)
                 else:
                     grad = p.grad
                     w = p
@@ -130,7 +131,7 @@ class AdamW(Optimizer):
 
                 if is_qweight:
                     # update qweight data
-                    p.data = pack_fp_weight(w, p.scales, p.zeros, p.g_idx, p.w_bit, p.asym, p.device)
+                    p.data = pack_fp_weight(w, p)
                     is_qweight = False
 
         return loss
